@@ -76,6 +76,9 @@ class YoutubeService(Service) :
         
     def select_format(self, max_height=None) :
         assert self.validate()
+
+        if self['formats'] is None :
+            return self
         
         if 'quality' in self._infos :
             key = 'quality'
