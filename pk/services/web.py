@@ -59,6 +59,12 @@ class WebService(Service) :
         response = self.opener.open('http://httpbin.org/get?option=value')
         return json.load(response)
 
+    @classmethod
+    def domain(cls, url) :
+        url_split = urlparse.urlsplit(url)
+        return url_split.netloc
+        
+
 # --------------------------------------------------------------------
 
 class WebRequest(WebService) :

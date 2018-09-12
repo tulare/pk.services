@@ -13,7 +13,6 @@ log = logging.getLogger(__name__)
 log.debug('MODULE {}'.format(__name__))
 
 import youtube_dl
-import subprocess
 
 from .exceptions import ServiceError
 from .types import Service
@@ -75,40 +74,69 @@ class YoutubeService(Service) :
             )
         
     def select_format(self, max_height=None) :
+        """
+        Selection d'un format video
+        A revoir : quelques lourdeurs dues aux noms des champs qui diffèrent
+        en fonction de l'extracteur
+        """
         assert self.validate()
 
+        # pas de liste de formats
         if self['formats'] is None :
             return self
-        
+
+        # identifier la clé utilisée
         if 'quality' in self._infos :
             key = 'quality'
         if 'height' in self._infos :
             key = 'height'
 
+        # filtre pour ne garder que les formats Video
+        video_formats = list(
+            filter(
+                lambda f : key in f,
+                self['formats']
+            )
+        )
+
+        # filter pour ne garder que les formats Audio/Video
+        try :
+            av_formats = list(
+                filter(
+                    lambda f : f['acodec'] is not 'none',
+                    video_formats
+                )
+            )
+        except Exception as e :
+            av_formats = video_formats
+
+        # selection par la hauteur maximum de la video
         try :
             selected = max(
                 filter(
                     lambda f : f[key] <= max_height,
-                    self['formats']
+                    av_formats
                 ),
                 key = lambda f : f[key]
             )
         except (TypeError, ValueError) :
             if max_height is None :
                 selected = max(
-                    self['formats'],
+                    av_formats,
                     key = lambda f : f[key]
                 )
             else :
                 selected = min(
-                    self['formats'],
+                    av_formats,
                     key = lambda f : f[key]
                 )
 
         return selected
 
     def video(self, max_height=None) :
-        
+        """
+        Retourne le titre et l'url résolue pour la vidéo sélectionnée
+        """
         selected = self.select_format(max_height)
 
         title = '{} - {}'.format(
@@ -118,40 +146,3 @@ class YoutubeService(Service) :
 
         return title, selected['url']
         
-    def probe(self, max_height=None) :
-        title, video_url = self.video(max_height)
-
-        command = [ 'ffprobe', '-show_format', '-show_streams', video_url ]
-        probe = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        out, err = probe.communicate()
-
-        return out
-
-    def ffplay(self, max_height=None) :
-        title, video_url = self.video(max_height)
-
-        command = [
-            'ffplay',
-            '-window_title', title,
-            '-loglevel', 'quiet',
-            video_url,
-        ]
-
-        return subprocess.Popen(command)
-
-    def mpv(self, max_height=None) :
-        title, video_url = self.video(max_height)
-
-        command = [
-            'mpv',
-            '--title', title,
-            video_url,
-        ]
-
-        return subprocess.Popen(command)
-
-            
