@@ -44,8 +44,6 @@ def popen_player(command, console) :
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     return subprocess.Popen(
         map(stringify, command),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
         startupinfo=startupinfo,
         close_fds=ON_POSIX,
     )
@@ -54,7 +52,15 @@ def popen_player(command, console) :
 
 def check_player(command) :
     try :
-        proc = popen_player(command, console=False)
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        proc = subprocess.Popen(
+            map(stringify, command),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            startupinfo=startupinfo,
+            close_fds=ON_POSIX,
+        )
     except WindowsError :
         return False
 
